@@ -12,7 +12,6 @@ app.showLoader = function () {
   document.getElementById('loader').style.display = 'block';
   app.loader = true;
 };
-
 app.hideLoader = function () {
   document.getElementById('loader').style.display = 'none';
   app.loader = false;
@@ -23,12 +22,12 @@ app.hideSections = function() {
     item.style.display = 'none';
   });
 };
-
 app.showSection = function (section) {
   app.hideSections();
   document.getElementById(section).style.display = 'block';
   app.lastSection = section;
 };
+
 
 app.onAuthStateChanged = function (user) {
   if (user) {
@@ -37,7 +36,6 @@ app.onAuthStateChanged = function (user) {
     app.removeUser();
   }
 };
-
 app.setUser = function (user) {
   app.user = user;
   app.logged = true;
@@ -46,9 +44,8 @@ app.setUser = function (user) {
     item.style.display = 'block';
   });
 
-  app.showLoader();
+  app.hideLoader();
 };
-
 app.removeUser = function () {
   app.user = null;
   app.logged = false;
@@ -60,12 +57,62 @@ app.removeUser = function () {
   app.ui.start('#firebaseui-auth-container', app.uiConfig);
 };
 
+app.storeRoom = function (name, callback) {
+  if (app.user === null) return;
+  app.showLoader();
+  const roomsRef = app.db.collection('rooms');
+
+  roomsRef.add({
+    name: name,
+    owner: app.user.uid,
+    created_at: new Date(),
+    owner_name: app.user.displayName || `${app.user.phoneNumber.substring(0, 4)}..${app.user.phoneNumber.substring(7)}`,
+    official: false,
+  })
+    .then(function(docRef) {
+      // app.getRooms();
+      app.hideLoader();
+      callback(null);
+    })
+    .catch(function(error) {
+      app.hideLoader();
+      callback(error);
+    });
+
+};
+
 app.domListeners = function () {
   document.getElementById('logout').addEventListener('click', function () {
     if (app.user === null) return;
     firebase.auth().signOut();
   });
+
+  document.getElementById('add').addEventListener('click', function() {
+    if (app.user === null) return;
+    app.showSection('addNewRoom');
+  });
+
+  document.getElementById('storeRoom').addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (app.user === null) return;
+
+    const name = document.getElementById('name');
+
+    const value = name.value.trim();
+    if (value === '') return;
+
+    name.value = '';
+    name.disabled = true;
+    app.storeRoom(value, function(error){
+      if (error) {
+        console.log("hubo un error", error);
+        return;
+      }
+      name.disabled = false;
+    });
+  });
 };
+
 
 
 app.initialize = function () {
@@ -79,6 +126,9 @@ app.initialize = function () {
   };
 
   firebase.initializeApp(config);
+
+  app.db = firebase.firestore();
+  app.db.settings({timestampsInSnapshots: true});
 
   app.auth = firebase.auth();
 
