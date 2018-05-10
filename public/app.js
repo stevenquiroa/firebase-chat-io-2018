@@ -44,7 +44,7 @@ app.setUser = function (user) {
     item.style.display = 'block';
   });
 
-  app.hideLoader();
+  app.getRooms();
 };
 app.removeUser = function () {
   app.user = null;
@@ -70,8 +70,7 @@ app.storeRoom = function (name, callback) {
     official: false,
   })
     .then(function(docRef) {
-      // app.getRooms();
-      app.hideLoader();
+      app.getRooms();
       callback(null);
     })
     .catch(function(error) {
@@ -80,6 +79,101 @@ app.storeRoom = function (name, callback) {
     });
 
 };
+app.updateRooms = function (callback) {
+  const list = document.getElementById('rooms-list');
+
+  cleanRooms = function () {
+    list.innerText = '';
+  };
+
+  appendRoom = function (id, room) {
+    const li = document.createElement('li');
+    li.id = id;
+    li.className = 'mdc-list-item mdc-ripple-upgraded mdc-ripple-upgraded--foreground-activation';
+    li.innerHTML = `
+      <span class="mdc-list-item__graphic" role="presentation">
+        <i class="material-icons" aria-hidden="true">${room.icon || 'general'}</i>
+      </span>
+        <span class="mdc-list-item__text">
+            <span class="mdc-list-item__secondary-text">${room.owner_name}</span>
+            ${room.name}
+        
+      </span>      
+    `;
+
+    if (room.owner === app.user.uid) {
+      const del = document.createElement('span');
+      del.className = 'mdc-list-item__graphic';
+      del.style.position = 'absolute';
+      del.style.right = 0;
+
+      del.innerHTML = '<i class="material-icons" aria-hidden="true">delete</i>';
+
+      del.addEventListener('click', function(event) {
+        event.stopPropagation();
+        app.deleteRoom(id);
+      });
+      li.appendChild(del);
+    }
+
+    li.addEventListener('click', function() {
+      app.openRoom(id);
+    });
+
+    list.appendChild(li);
+  };
+
+  const roomsRef = app.db.collection('rooms');
+
+  roomsRef
+    .orderBy("created_at", "asc")
+    .get().then(function(querySnapshot){
+    cleanRooms();
+    querySnapshot.forEach(function(doc) {
+      if (doc.exists) {
+        appendRoom(doc.id, doc.data());
+      } else {
+        // doc.data() will be undefined in this case
+        console.log("No such document!");
+      }
+
+      callback();
+
+    });
+  }).catch(function(error) {
+    console.log("Error getting document:", error);
+  });
+};
+app.getRooms = function () {
+  app.showLoader();
+
+  app.updateRooms(function() {
+    app.showSection('rooms');
+    app.hideLoader();
+  });
+
+};
+app.deleteRoom = function(id) {
+  if (app.user === null) return;
+  app.showLoader();
+  const roomsRef = app.db.collection('rooms');
+
+  roomsRef.doc(id).delete().then(function() {
+    app.hideLoader();
+    const li = document.getElementById(id);
+    if (li) {
+      li.parentNode.removeChild(li);
+    }
+  }).catch(function(error){
+    console.log(error);
+    app.hideLoader();
+    alert("No tienes permisos");
+  });
+
+
+};
+
+
 
 app.domListeners = function () {
   document.getElementById('logout').addEventListener('click', function () {
@@ -90,6 +184,20 @@ app.domListeners = function () {
   document.getElementById('add').addEventListener('click', function() {
     if (app.user === null) return;
     app.showSection('addNewRoom');
+  });
+
+  document.getElementById('home').addEventListener('click', function() {
+    if (app.user === null) return;
+    app.hideSections();
+    app.showSection('rooms');
+  });
+
+  document.getElementById('reload').addEventListener('click', function() {
+    if (app.user === null) return;
+    app.showLoader();
+    app.updateRooms(function() {
+      app.hideLoader();
+    });
   });
 
   document.getElementById('storeRoom').addEventListener('submit', function(event) {
