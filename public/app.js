@@ -62,6 +62,17 @@ app.removeUser = function () {
   app.hideLoader();
   app.ui.start('#firebaseui-auth-container', app.uiConfig);
 };
+app.getUserName = function () {
+  if (app.user.displayName) {
+    return app.user.displayName;
+  } else if (app.user.phoneNumber) {
+    return `${app.user.phoneNumber.substring(0, 4)}..${app.user.phoneNumber.substring(7)}`;
+  } else if(app.user.email) {
+    return app.user.email;
+  } else {
+    return 'N/A';
+  }
+};
 
 app.storeRoom = function (name, callback) {
   if (app.user === null) return;
@@ -72,7 +83,7 @@ app.storeRoom = function (name, callback) {
     name: name,
     owner: app.user.uid,
     created_at: new Date(),
-    owner_name: app.user.displayName || `${app.user.phoneNumber.substring(0, 4)}..${app.user.phoneNumber.substring(7)}`,
+    owner_name: app.getUserName(),
     official: false,
   })
     .then(function(docRef) {
@@ -231,7 +242,7 @@ app.sendMessage = function (message, callback) {
     type: 'text',
     owner: app.user.uid,
     created_at: Date.now(),
-    owner_name: app.user.displayName || `${app.user.phoneNumber.substring(0, 4)}..${app.user.phoneNumber.substring(7)}`,
+    owner_name: app.getUserName(),
 
   })
     .then(function(docRef) {
