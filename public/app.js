@@ -8,7 +8,6 @@ const app = {
   messages: [],
 };
 
-
 app.showLoader = function () {
   document.getElementById('loader').style.display = 'block';
   app.loader = true;
@@ -29,6 +28,43 @@ app.showSection = function (section) {
   app.hideSections();
   document.getElementById(section).style.display = 'block';
   app.lastSection = section;
+};
+
+app.onAuthStateChanged = function (user) {
+  if (user) {
+    app.setUser(user);
+  } else {
+    app.removeUser();
+  }
+};
+
+app.setUser = function (user) {
+  app.user = user;
+  app.logged = true;
+  document.getElementById('firebaseui-auth-container').style.display = 'none';
+  document.querySelectorAll('.login-links').forEach(function (item) {
+    item.style.display = 'block';
+  });
+
+  app.showLoader();
+};
+
+app.removeUser = function () {
+  app.user = null;
+  app.logged = false;
+  document.getElementById('firebaseui-auth-container').style.display = 'block';
+  document.querySelectorAll('.login-actions').forEach(function (item) {
+    item.style.display = 'none';
+  });
+  app.hideLoader();
+  app.ui.start('#firebaseui-auth-container', app.uiConfig);
+};
+
+app.domListeners = function () {
+  document.getElementById('logout').addEventListener('click', function () {
+    if (app.user === null) return;
+    firebase.auth().signOut();
+  });
 };
 
 
@@ -52,8 +88,6 @@ app.initialize = function () {
         // User successfully signed in.
         // Return type determines whether we continue the redirect automatically
         // or whether we leave that to developer to handle.
-        document.getElementById('firebaseui-auth-container').style.display = 'none';
-        app.showLoader();
         return false;
       },
       uiShown: function() {
@@ -64,7 +98,7 @@ app.initialize = function () {
     },
     // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
     signInFlow: 'popup',
-    signInSuccessUrl: '/login',
+    signInSuccessUrl: '/',
     signInOptions: [
       // Leave the lines as is for the providers you want to offer your users.
       firebase.auth.EmailAuthProvider.PROVIDER_ID,
@@ -78,9 +112,10 @@ app.initialize = function () {
     tosUrl: '/terms'
   };
 
+
   app.ui = new firebaseui.auth.AuthUI(app.auth);
-  app.ui.start('#firebaseui-auth-container', app.uiConfig);
-  document.getElementById('firebaseui-auth-container').style.display = 'block';
+  app.auth.onAuthStateChanged(app.onAuthStateChanged);
+  app.domListeners();
 };
 
 app.initialize();
