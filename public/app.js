@@ -24,6 +24,12 @@ app.hideSections = function() {
 };
 app.showSection = function (section) {
   app.hideSections();
+  if (app.lastSection === 'room') {
+    app.realtimeDB.ref('messages').child(app.actualRoom).off('child_added', app.printMessages);
+    app.actualRoom = null;
+    app.messages = [];
+    document.getElementById('conversation').innerHTML = '';
+  }
   document.getElementById(section).style.display = 'block';
   app.lastSection = section;
 };
@@ -172,7 +178,69 @@ app.deleteRoom = function(id) {
 
 
 };
+app.openRoom = function(id) {
+  app.showSection('room');
+  app.showLoader();
+  app.actualRoom = id;
 
+  app.realtimeDB.ref('messages').child(id).orderByChild('created_at').limitToLast(20).on('child_added', app.onAddedMessages);
+};
+
+app.printMessages = function () {
+  if (app.messages.length === 0) return;
+  let virtualList = '';
+  const list = document.getElementById('conversation');
+  const li = document.createElement('li');
+
+  app.messages.forEach(function(item) {
+    virtualList = virtualList + `
+      <li class="mdc-list-item mdc-ripple-upgraded mdc-ripple-upgraded--foreground-activation" dir="ltr">
+        <span class="mdc-list-item__text ${(item.owner === app.user.uid) ? 'message-right' : ''}">
+            <span class="mdc-list-item__secondary-text">${item.owner_name}</span>
+            ${item.message}        
+      </span>
+      </li>
+    `
+  });
+
+  list.innerHTML = virtualList;
+
+  list.scrollTop = list.scrollHeight;
+};
+app.onAddedMessages = function(snapshot) {
+  if (snapshot) {
+    app.messages = app.messages.concat(snapshot.val());
+  }
+
+  app.printMessages();
+  app.hideLoader();
+};
+app.openRoom = function(id) {
+  app.showSection('room');
+  app.showLoader();
+  app.actualRoom = id;
+
+  app.realtimeDB.ref('messages').child(id).orderByChild('created_at').limitToLast(20).on('child_added', app.onAddedMessages);
+};
+app.sendMessage = function (message, callback) {
+  if (app.user === null || app.actualRoom === null) return;
+  const messagesRef = app.realtimeDB.ref('messages').child(app.actualRoom);
+
+  messagesRef.push({
+    message: message,
+    type: 'text',
+    owner: app.user.uid,
+    created_at: Date.now(),
+    owner_name: app.user.displayName || `${app.user.phoneNumber.substring(0, 4)}..${app.user.phoneNumber.substring(7)}`,
+
+  })
+    .then(function(docRef) {
+      callback(null);
+    })
+    .catch(function(error) {
+      callback(error);
+    });
+};
 
 
 app.domListeners = function () {
@@ -219,6 +287,26 @@ app.domListeners = function () {
       name.disabled = false;
     });
   });
+
+  document.getElementById('sendMessage').addEventListener('submit', function(event) {
+    event.preventDefault();
+    if (app.user === null) return;
+
+    const message = document.getElementById('message');
+
+    const value = message.value.trim();
+    if (value === '') return;
+
+    message.value = '';
+    message.disabled = true;
+    app.sendMessage(value, function(error){
+      if (error) {
+        console.log("hubo un error", error);
+        return;
+      }
+      message.disabled = false;
+    });
+  });
 };
 
 
@@ -237,6 +325,8 @@ app.initialize = function () {
 
   app.db = firebase.firestore();
   app.db.settings({timestampsInSnapshots: true});
+
+  app.realtimeDB = firebase.database();
 
   app.auth = firebase.auth();
 

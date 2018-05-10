@@ -7,6 +7,7 @@
     <!-- update the version number as needed -->
     <script src="https://www.gstatic.com/firebasejs/5.0.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/5.0.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/5.0.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/5.0.1/firebase-firestore.js"></script>
 
     <!-- initialize the SDK after all desired features are loaded -->
@@ -71,6 +72,29 @@
             </li>
           </ul>
 
+        </div>
+
+      </section>
+
+      <section id="room" class="login-actions section">
+        <ul id="conversation">
+        </ul>
+        <div style="position: absolute; bottom: 0; width: 95%;">
+          <div style="position: relative; text-align: center;">
+            <form id="sendMessage" style="width: 90%;" >
+              <div id="tf-box-trailing-example" class="mdc-text-field  mdc-text-field--fullwidth mdc-text-field--with-trailing-icon">
+                <input type="text" class="mdc-text-field__input"
+                       placeholder="Escribe algo bonito"
+                       id="message"
+                       autocomplete="off"
+                >
+                <i class="material-icons mdc-text-field__icon" tabindex="0" role="button"
+                   onClick="document.getElementById('sendMessage').submit()"
+                >send</i>
+                <div class="mdc-line-ripple" style="transform-origin: 116.017px center 0px;"></div>
+              </div>
+            </form>
+          </div>
         </div>
 
       </section>
